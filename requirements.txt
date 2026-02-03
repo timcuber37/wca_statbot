@@ -5,4 +5,5 @@ aiohttp>=3.9.0
 sqlalchemy>=2.0.0
 aiomysql>=0.2.0
 PyMySQL>=1.1.0
+wcwidth>=0.2.0
 

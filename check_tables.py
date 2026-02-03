@@ -7,8 +7,8 @@ async def check_tables():
         host='localhost',
         port=3306,
         user='root',
-        password='poke990',
-        db='wca'
+        password='', # Add your password here
+        db='' # Add your database name here
     )
 
     async with conn.cursor() as cursor:

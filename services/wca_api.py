@@ -2,6 +2,7 @@
 import logging
 import aiomysql
 from typing import List, Dict, Any
+from wcwidth import wcswidth
 from config import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
 
 logger = logging.getLogger(__name__)
@@ -141,6 +142,37 @@ class WCAService:
             remaining = (centiseconds % 6000) / 100
             return f"{minutes}:{remaining:05.2f}"
 
+    def _display_width(self, text: str) -> int:
+        """
+        Calculate the display width of a string, accounting for Unicode characters.
+
+        Args:
+            text: String to measure
+
+        Returns:
+            Display width in terminal columns
+        """
+        width = wcswidth(text)
+        # If wcswidth returns -1 (for control characters), fall back to len()
+        return width if width >= 0 else len(text)
+
+    def _pad_to_width(self, text: str, target_width: int) -> str:
+        """
+        Pad a string to a target display width, accounting for Unicode characters.
+
+        Args:
+            text: String to pad
+            target_width: Target display width
+
+        Returns:
+            Padded string
+        """
+        current_width = self._display_width(text)
+        padding_needed = target_width - current_width
+        if padding_needed > 0:
+            return text + (' ' * padding_needed)
+        return text
+
     def format_results(self, results: List[Dict[str, Any]], max_results: int = 50) -> str:
         """
         Format query results for Discord display.
@@ -168,16 +200,16 @@ class WCAService:
         # Get column names from first result
         columns = list(display_results[0].keys())
 
-        # Calculate optimal column widths
+        # Calculate optimal column widths using display width (accounts for Unicode)
         col_widths = {}
         for col in columns:
-            # Start with column name length
-            max_width = len(str(col))
+            # Start with column name display width
+            max_width = self._display_width(str(col))
             # Check all data values for this column
             for row in display_results:
-                value_length = len(str(row.get(col, "")))
-                max_width = max(max_width, value_length)
-            # Set max width (but cap at 50 characters to prevent extremely wide columns)
+                value_width = self._display_width(str(row.get(col, "")))
+                max_width = max(max_width, value_width)
+            # Set max width (but cap at 50 to prevent extremely wide columns)
             col_widths[col] = min(max_width, 50)
 
         # Create formatted output
@@ -189,13 +221,13 @@ class WCAService:
         lines.append("=" * total_width)
 
         # Header
-        header = " | ".join(str(col).ljust(col_widths[col]) for col in columns)
+        header = " | ".join(self._pad_to_width(str(col), col_widths[col]) for col in columns)
         lines.append(header)
         lines.append("-" * total_width)
 
         # Data rows
         for row in display_results:
-            values = [str(row.get(col, "")).ljust(col_widths[col]) for col in columns]
+            values = [self._pad_to_width(str(row.get(col, "")), col_widths[col]) for col in columns]
             lines.append(" | ".join(values))
 
         if len(results) > max_results:
