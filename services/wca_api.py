@@ -1,7 +1,9 @@
 """WCA API service for executing queries and fetching data."""
 import logging
+import re
 import aiomysql
 from typing import List, Dict, Any
+from unidecode import unidecode
 from wcwidth import wcswidth
 from config import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
 
@@ -82,6 +84,28 @@ class WCAService:
                 "message": str(e)
             }]
 
+    def _sanitize_name(self, name: str) -> str:
+        """
+        Convert a name to ASCII-only characters for consistent display.
+        Removes parenthetical text (often non-Latin script) and converts
+        accented characters to ASCII equivalents.
+
+        Args:
+            name: Original name string
+
+        Returns:
+            ASCII-only name
+        """
+        if not isinstance(name, str):
+            return str(name)
+        # Remove text in parentheses (often contains non-Latin names)
+        name = re.sub(r'\s*\([^)]*\)', '', name)
+        # Convert accented characters to ASCII equivalents
+        name = unidecode(name)
+        # Clean up any extra whitespace
+        name = ' '.join(name.split())
+        return name
+
     def _post_process_results(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         Post-process query results to format times and other WCA-specific data.
@@ -93,6 +117,7 @@ class WCAService:
             Processed results
         """
         processed = []
+        name_columns = ['name', 'personName', 'person_name', 'competitorName']
 
         for row in results:
             processed_row = {}
@@ -107,6 +132,9 @@ class WCAService:
                         processed_row[key] = 'DNS'
                     else:
                         processed_row[key] = value
+                # Sanitize name columns to ASCII
+                elif key in name_columns:
+                    processed_row[key] = self._sanitize_name(value)
                 else:
                     processed_row[key] = value
 
@@ -156,13 +184,14 @@ class WCAService:
         # If wcswidth returns -1 (for control characters), fall back to len()
         return width if width >= 0 else len(text)
 
-    def _pad_to_width(self, text: str, target_width: int) -> str:
+    def _pad_to_width(self, text: str, target_width: int, align_right: bool = False) -> str:
         """
         Pad a string to a target display width, accounting for Unicode characters.
 
         Args:
             text: String to pad
             target_width: Target display width
+            align_right: If True, pad on the left (right-align); otherwise pad on right
 
         Returns:
             Padded string
@@ -170,8 +199,16 @@ class WCAService:
         current_width = self._display_width(text)
         padding_needed = target_width - current_width
         if padding_needed > 0:
+            if align_right:
+                return (' ' * padding_needed) + text
             return text + (' ' * padding_needed)
         return text
+
+    def _is_name_column(self, col_name: str) -> bool:
+        """Check if a column contains names and should be left-aligned."""
+        name_keywords = ['name', 'person', 'competitor', 'country', 'city', 'venue']
+        col_lower = col_name.lower()
+        return any(keyword in col_lower for keyword in name_keywords)
 
     def format_results(self, results: List[Dict[str, Any]], max_results: int = 50) -> str:
         """
@@ -220,14 +257,20 @@ class WCAService:
         total_width = sum(col_widths.values()) + (len(columns) - 1) * 3  # 3 for " | "
         lines.append("=" * total_width)
 
-        # Header
-        header = " | ".join(self._pad_to_width(str(col), col_widths[col]) for col in columns)
-        lines.append(header)
+        # Header (name columns left-aligned, others right-aligned)
+        header_parts = []
+        for col in columns:
+            align_right = not self._is_name_column(col)
+            header_parts.append(self._pad_to_width(str(col), col_widths[col], align_right))
+        lines.append(" | ".join(header_parts))
         lines.append("-" * total_width)
 
-        # Data rows
+        # Data rows (name columns left-aligned, others right-aligned)
         for row in display_results:
-            values = [self._pad_to_width(str(row.get(col, "")), col_widths[col]) for col in columns]
+            values = []
+            for col in columns:
+                align_right = not self._is_name_column(col)
+                values.append(self._pad_to_width(str(row.get(col, "")), col_widths[col], align_right))
             lines.append(" | ".join(values))
 
         if len(results) > max_results:
