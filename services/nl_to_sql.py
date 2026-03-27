@@ -158,9 +158,33 @@ SQL Query:"""
                 logger.warning(f"Translation error: {sql_query}")
                 return None
             
+            if not self.validate_sql(sql_query):
+                logger.warning(f"Rejected unsafe SQL: {sql_query}")
+                return None
+
             return sql_query
-            
+
         except Exception as e:
-            logger.error(f"Error translating to SQL: {e}", exc_info=e)
+            logger.error(f"Error translating to SQL: {e}")
             return None
+
+    def validate_sql(self, sql_query: str) -> bool:
+        """Validate that SQL is a safe read-only SELECT query."""
+        sql_upper = sql_query.strip().upper()
+
+        if not sql_upper.startswith('SELECT'):
+            return False
+
+        forbidden = [
+            'DROP', 'DELETE', 'UPDATE', 'INSERT', 'ALTER', 'TRUNCATE',
+            'CREATE', 'REPLACE', 'GRANT', 'REVOKE', 'EXEC', 'EXECUTE',
+            'INTO OUTFILE', 'INTO DUMPFILE', 'LOAD_FILE'
+        ]
+        for keyword in forbidden:
+            # Check as whole word to avoid false positives (e.g. "UPDATES" in a column name)
+            import re
+            if re.search(r'\b' + keyword + r'\b', sql_upper):
+                return False
+
+        return True
 

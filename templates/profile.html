@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - WCA StatBot</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-inner">
+            <a href="/" class="nav-logo">WCA StatBot</a>
+            <div class="nav-links">
+                <a href="/" class="nav-link">Home</a>
+                <a href="/about" class="nav-link">About</a>
+                <a href="https://github.com/timcuber37/wca_statbot" target="_blank" rel="noopener" class="nav-link nav-link-external">
+                    GitHub
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                        <polyline points="15 3 21 3 21 9"></polyline>
+                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                    </svg>
+                </a>
+                <button class="auth-btn signed-in" id="auth-btn" onclick="window.location.href='/profile'">Profile</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Account Info Card -->
+        <div class="profile-card" id="profile-card">
+            <div class="profile-info">
+                <img class="profile-avatar" id="profile-avatar" src="" alt="Avatar">
+                <div class="profile-details">
+                    <h1 class="profile-name" id="profile-name">Loading...</h1>
+                    <p class="profile-email" id="profile-email"></p>
+                    <div class="profile-stats">
+                        <span class="profile-stat" id="profile-joined"></span>
+                        <span class="profile-stat" id="profile-query-count"></span>
+                    </div>
+                </div>
+            </div>
+            <button class="signout-btn" onclick="signOut()">Sign Out</button>
+        </div>
+
+        <!-- Saved Queries Section -->
+        <h2 class="section-title">Saved Queries</h2>
+
+        <div id="saved-loading" class="hidden">
+            <div class="loading-bar"></div>
+            <span>Loading saved queries...</span>
+        </div>
+
+        <div id="saved-empty" class="hidden">
+            <p>No saved queries yet. Run a query on the <a href="/">home page</a> and click Save to keep it here.</p>
+        </div>
+
+        <div id="saved-list"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = '{{ supabase_url }}';
+        const SUPABASE_ANON_KEY = '{{ supabase_anon_key }}';
+        let sbClient = null;
+        let currentUser = null;
+
+        if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+            sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            initAuth();
+        } else {
+            window.location.href = '/login';
+        }
+
+        async function initAuth() {
+            const { data: { session } } = await sbClient.auth.getSession();
+            if (!session?.user) {
+                window.location.href = '/login';
+                return;
+            }
+            currentUser = session.user;
+            updateProfile(session.user);
+            loadSavedQueries();
+
+            sbClient.auth.onAuthStateChange((_event, session) => {
+                if (!session?.user) window.location.href = '/login';
+            });
+        }
+
+        function updateProfile(user) {
+            const meta = user.user_metadata || {};
+            const authBtn = document.getElementById('auth-btn');
+            authBtn.textContent = meta.full_name || user.email;
+
+            document.getElementById('profile-avatar').src = meta.avatar_url || '';
+            document.getElementById('profile-name').textContent = meta.full_name || 'User';
+            document.getElementById('profile-email').textContent = user.email || '';
+
+            const joined = new Date(user.created_at).toLocaleDateString('en-US', {
+                month: 'long', year: 'numeric'
+            });
+            document.getElementById('profile-joined').textContent = `Member since ${joined}`;
+        }
+
+        async function signOut() {
+            await sbClient.auth.signOut();
+            window.location.href = '/';
+        }
+
+        async function getAccessToken() {
+            const { data: { session } } = await sbClient.auth.getSession();
+            return session?.access_token || null;
+        }
+
+        async function loadSavedQueries() {
+            const savedLoading = document.getElementById('saved-loading');
+            const savedEmpty = document.getElementById('saved-empty');
+            const savedList = document.getElementById('saved-list');
+
+            savedLoading.classList.remove('hidden');
+            savedList.innerHTML = '';
+
+            const token = await getAccessToken();
+            try {
+                const response = await fetch('/api/saved-queries', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+
+                savedLoading.classList.add('hidden');
+
+                if (!data.queries || data.queries.length === 0) {
+                    savedEmpty.classList.remove('hidden');
+                    document.getElementById('profile-query-count').textContent = '0 saved queries';
+                    return;
+                }
+
+                savedEmpty.classList.add('hidden');
+                document.getElementById('profile-query-count').textContent = `${data.queries.length} saved quer${data.queries.length !== 1 ? 'ies' : 'y'}`;
+
+                data.queries.forEach(q => {
+                    const date = new Date(q.created_at).toLocaleDateString('en-US', {
+                        month: 'short', day: 'numeric', year: 'numeric'
+                    });
+
+                    const previewHtml = buildPreviewTable(q.result_preview);
+
+                    const card = document.createElement('div');
+                    card.className = 'saved-card';
+                    card.innerHTML = `
+                        <div class="saved-card-header">
+                            <div>
+                                <div class="saved-question">${escapeHtml(q.question)}</div>
+                                <div class="saved-meta">${date} &middot; ${q.result_count} result${q.result_count !== 1 ? 's' : ''}</div>
+                            </div>
+                            <div class="saved-actions">
+                                <button class="saved-action-btn" onclick="rerunQuery('${escapeHtml(q.question)}')" title="Re-run">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                                </button>
+                                <button class="saved-action-btn delete" onclick="deleteQuery('${q.id}', this)" title="Delete">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <details class="saved-sql">
+                            <summary>SQL</summary>
+                            <code>${escapeHtml(q.sql_query)}</code>
+                        </details>
+                        ${previewHtml ? `<div class="saved-preview">${previewHtml}</div>` : ''}
+                    `;
+                    savedList.appendChild(card);
+                });
+            } catch {
+                savedLoading.classList.add('hidden');
+                savedList.innerHTML = '<p class="error">Failed to load saved queries.</p>';
+            }
+        }
+
+        function buildPreviewTable(preview) {
+            if (!preview || preview.length === 0) return '';
+            const cols = Object.keys(preview[0]);
+            let html = '<table><thead><tr>';
+            cols.forEach(c => html += `<th>${escapeHtml(c)}</th>`);
+            html += '</tr></thead><tbody>';
+            preview.forEach(row => {
+                html += '<tr>';
+                cols.forEach(c => html += `<td>${escapeHtml(String(row[c] ?? ''))}</td>`);
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+            return html;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function rerunQuery(question) {
+            window.location.href = `/?q=${encodeURIComponent(question)}`;
+        }
+
+        async function deleteQuery(id, btn) {
+            if (!confirm('Delete this saved query?')) return;
+            const token = await getAccessToken();
+            try {
+                const response = await fetch(`/api/saved-query/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    btn.closest('.saved-card').remove();
+                    const savedList = document.getElementById('saved-list');
+                    const count = savedList.children.length;
+                    document.getElementById('profile-query-count').textContent = `${count} saved quer${count !== 1 ? 'ies' : 'y'}`;
+                    if (!count) {
+                        document.getElementById('saved-empty').classList.remove('hidden');
+                    }
+                }
+            } catch {
+                alert('Failed to delete query.');
+            }
+        }
+    </script>
+</body>
+</html>

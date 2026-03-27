@@ -1,4 +1,4 @@
-"""Configuration management for the WCA Discord bot."""
+"""Configuration management for WCA statbot."""
 import os
 from dotenv import load_dotenv
 
@@ -17,13 +17,18 @@ WCA_API_BASE_URL = os.getenv("WCA_API_BASE_URL", "https://www.worldcubeassociati
 # Alternative: If using the unofficial REST API
 WCA_REST_API_URL = os.getenv("WCA_REST_API_URL", "https://raw.githubusercontent.com/robiningelbrecht/wca-rest-api/master/api")
 
-# Database Configuration (if using local database)
+# Database Configuration (local MySQL or TiDB Serverless)
 DATABASE_URL = os.getenv("DATABASE_URL")  # e.g., "mysql+aiomysql://user:pass@localhost/wca"
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = int(os.getenv("DB_PORT", "3306"))
 DB_USER = os.getenv("DB_USER", "root")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")
 DB_NAME = os.getenv("DB_NAME", "wca")
+DB_SSL = os.getenv("DB_SSL", "false").lower() == "true"  # Required for TiDB Serverless
+
+# Supabase Configuration
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
 
 # Bot Settings
 COMMAND_PREFIX = os.getenv("COMMAND_PREFIX", "!wca")

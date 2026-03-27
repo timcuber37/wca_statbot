@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - WCA StatBot</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-inner">
+            <a href="/" class="nav-logo">WCA StatBot</a>
+            <div class="nav-links">
+                <a href="/" class="nav-link">Home</a>
+                <a href="/about" class="nav-link active">About</a>
+                <a href="https://github.com/timcuber37/wca_statbot" target="_blank" rel="noopener" class="nav-link nav-link-external">
+                    GitHub
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                        <polyline points="15 3 21 3 21 9"></polyline>
+                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                    </svg>
+                </a>
+                <button class="auth-btn" id="auth-btn" onclick="handleAuth()">Sign In</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1>About</h1>
+        <p class="subtitle">How WCA StatBot works</p>
+
+        <div class="about-content">
+            <section class="about-section">
+                <h2>What is WCA StatBot?</h2>
+                <p>WCA StatBot is an AI-powered tool that lets you query World Cube Association competition data using plain English. Instead of writing SQL, just ask a question and get instant results.</p>
+            </section>
+
+            <section class="about-section">
+                <h2>How It Works</h2>
+                <div class="steps">
+                    <div class="step">
+                        <span class="step-num">1</span>
+                        <div>
+                            <h3>Ask a Question</h3>
+                            <p>Type any question about WCA data in natural language.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <span class="step-num">2</span>
+                        <div>
+                            <h3>AI Translation</h3>
+                            <p>Anthropic's Claude AI translates your question into a SQL query against the WCA database.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <span class="step-num">3</span>
+                        <div>
+                            <h3>Get Results</h3>
+                            <p>The query runs against the WCA database and results are displayed in a formatted table.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="about-section">
+                <h2>Database</h2>
+                <p>The app queries a database populated from the official <a href="https://www.worldcubeassociation.org/export/results" target="_blank" rel="noopener">WCA data export</a> (March 14, 2026), containing:</p>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-number">281,645</span>
+                        <span class="stat-label">Competitors</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">6,346,883</span>
+                        <span class="stat-label">Results</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">17,150</span>
+                        <span class="stat-label">Competitions</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">21</span>
+                        <span class="stat-label">Events</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="about-section">
+                <h2>Example Questions</h2>
+                <ul class="example-list">
+                    <li>What is the world record for 3x3?</li>
+                    <li>Who are the top 10 fastest 2x2 solvers?</li>
+                    <li>How many competitions have been held in the United States in 2025?</li>
+                    <li>Who has the most world record single results?</li>
+                    <li>Who is the top 3x3 competitor with the first name "Timothy"?</li>
+										<li>Who placed first in 3x3 finals at the 2023 World Championship?</li>
+                </ul>
+            </section>
+
+            <section class="about-section">
+                <h2>Tips for Better Results</h2>
+                <ul class="tips-list">
+                    <li>
+											<strong>Be Specific</strong>
+											<p>Make sure to be as precise as possible when formulating your question so the AI knows exactly what you're looking for, i.e., specify between single and average results.</p>
+                    </li>
+										<li>
+											<strong>Use Clear Language</strong>
+											<p>Avoid ambiguous terms and use clear, unambiguous language when asking your question, i.e., use "United States" instead of "America". </p>
+										</li>
+										<li>
+											<strong>Understand how WCA Results are Structured</strong>
+											<p>Having a basic understanding of WCA results and competition data can help you ask more effective questions and interpret the results.</p>
+										</li>
+										<li>
+											<strong>Experiment with Different Phrasings</strong>
+											<p>Try rephrasing your question in different ways to see if you get more accurate or detailed results.. i.e, ask "Who placed first in 3x3 finals" instead of asking "who won the competition".</p>
+										</li>
+                </ul>
+            </section>
+
+            <section class="about-section">
+                <h2>Discord Bot</h2>
+                <p>WCA StatBot is also available as a Discord bot, bringing the same natural language query capabilities directly into your server!</p>
+
+                <h3 class="about-subsection-title">Commands</h3>
+                <div class="command-list">
+                    <div class="command">
+                        <code>!wca query &lt;question&gt;</code>
+                        <span>Ask a question about WCA data. Aliases: <code>!wca q</code>, <code>!wca ask</code></span>
+                    </div>
+                    <div class="command">
+                        <code>!wca help</code>
+                        <span>Show available commands and example queries</span>
+                    </div>
+                    <div class="command">
+                        <code>!wca ping</code>
+                        <span>Check bot latency</span>
+                    </div>
+                </div>
+
+                <h3 class="about-subsection-title">Add to Your Server</h3>
+                <div class="steps">
+                    <div class="step">
+                        <span class="step-num">1</span>
+                        <div>
+                            <h3>Click the Invite Link</h3>
+                            <p>Use <a href="https://discord.com/oauth2/authorize?client_id=1450571905043267594&permissions=2048&scope=bot" target="_blank" rel="noopener">this link</a> to add WCA StatBot to your Discord server.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <span class="step-num">2</span>
+                        <div>
+                            <h3>Select Your Server</h3>
+                            <p>Choose the server you want to add the bot to from the dropdown. You must have <strong>Manage Server</strong> permissions in that server.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <span class="step-num">3</span>
+                        <div>
+                            <h3>Authorize Permissions</h3>
+                            <p>Review and approve the requested permissions, then click <strong>Authorize</strong>. The bot only needs permission to send messages.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <span class="step-num">4</span>
+                        <div>
+                            <h3>Start Querying</h3>
+                            <p>Head to any text channel and type <code>!wca query</code> followed by your question. For example: <code>!wca q Who has the fastest 3x3 single?</code></p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="about-section">
+                <h2>Tech Stack</h2>
+                <div class="tech-tags">
+                    <span class="tag">Python</span>
+                    <span class="tag">Flask</span>
+                    <span class="tag">Discord.py</span>
+                    <span class="tag">Anthropic Claude</span>
+                    <span class="tag">TiDB Serverless</span>
+                    <span class="tag">Supabase</span>
+                    <span class="tag">Fly.io</span>
+                    <span class="tag">Docker</span>
+                </div>
+            </section>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = '{{ supabase_url }}';
+        const SUPABASE_ANON_KEY = '{{ supabase_anon_key }}';
+        let sbClient = null;
+        let currentUser = null;
+
+        if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+            try {
+                sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                initAuth();
+            } catch (e) {
+                console.warn('Supabase init failed:', e);
+            }
+        }
+
+        async function initAuth() {
+            try {
+                const { data: { session } } = await sbClient.auth.getSession();
+                updateAuthUI(session);
+                sbClient.auth.onAuthStateChange((_event, session) => updateAuthUI(session));
+            } catch (e) {
+                console.warn('Auth init failed:', e);
+            }
+        }
+
+        function updateAuthUI(session) {
+            const authBtn = document.getElementById('auth-btn');
+            if (session?.user) {
+                currentUser = session.user;
+                authBtn.textContent = session.user.user_metadata?.full_name || session.user.email;
+                authBtn.classList.add('signed-in');
+            } else {
+                currentUser = null;
+                authBtn.textContent = 'Sign In';
+                authBtn.classList.remove('signed-in');
+            }
+        }
+
+        function handleAuth() {
+            if (currentUser) {
+                window.location.href = '/profile';
+            } else {
+                window.location.href = '/login';
+            }
+        }
+    </script>
+</body>
+</html>

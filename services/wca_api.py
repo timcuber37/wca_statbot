@@ -1,11 +1,12 @@
 """WCA API service for executing queries and fetching data."""
 import logging
 import re
+import ssl
 import aiomysql
 from typing import List, Dict, Any
 from unidecode import unidecode
 from wcwidth import wcswidth
-from config import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
+from config import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, DB_SSL
 
 logger = logging.getLogger(__name__)
 
@@ -28,16 +29,20 @@ class WCAService:
         """Get or create database connection pool."""
         if self.pool is None:
             try:
-                self.pool = await aiomysql.create_pool(
-                    host=self.db_config['host'],
-                    port=self.db_config['port'],
-                    user=self.db_config['user'],
-                    password=self.db_config['password'],
-                    db=self.db_config['db'],
-                    minsize=1,
-                    maxsize=10,
-                    autocommit=True
-                )
+                pool_kwargs = {
+                    'host': self.db_config['host'],
+                    'port': self.db_config['port'],
+                    'user': self.db_config['user'],
+                    'password': self.db_config['password'],
+                    'db': self.db_config['db'],
+                    'minsize': 1,
+                    'maxsize': 10,
+                    'autocommit': True,
+                }
+                if DB_SSL:
+                    ctx = ssl.create_default_context()
+                    pool_kwargs['ssl'] = ctx
+                self.pool = await aiomysql.create_pool(**pool_kwargs)
                 logger.info("Database connection pool created successfully")
             except Exception as e:
                 logger.error(f"Failed to create database connection pool: {e}")
@@ -277,6 +282,52 @@ class WCAService:
             lines.append(f"\n... and {len(results) - max_results} more results")
 
         return "\n".join(lines)
+
+    def format_results_html(self, results: List[Dict[str, Any]], max_results: int = 50) -> str:
+        """
+        Format query results as an HTML table for web display.
+
+        Args:
+            results: List of result dictionaries
+            max_results: Maximum number of results to display
+
+        Returns:
+            HTML table string
+        """
+        if not results:
+            return "<p>No results found.</p>"
+
+        if len(results) == 1 and 'error' in results[0]:
+            from html import escape
+            return f"<p class='error'>Error: {escape(str(results[0].get('message', 'Unknown error')))}</p>"
+
+        display_results = results[:max_results]
+
+        if len(display_results) == 0:
+            return "<p>No results found.</p>"
+
+        from html import escape
+        columns = list(display_results[0].keys())
+
+        html = '<table><thead><tr>'
+        for col in columns:
+            align = 'left' if self._is_name_column(col) else 'right'
+            html += f'<th style="text-align:{align}">{escape(str(col))}</th>'
+        html += '</tr></thead><tbody>'
+
+        for row in display_results:
+            html += '<tr>'
+            for col in columns:
+                align = 'left' if self._is_name_column(col) else 'right'
+                html += f'<td style="text-align:{align}">{escape(str(row.get(col, "")))}</td>'
+            html += '</tr>'
+
+        html += '</tbody></table>'
+
+        if len(results) > max_results:
+            html += f'<p class="truncated">Showing {max_results} of {len(results)} results</p>'
+
+        return html
 
     async def close(self):
         """Close the database connection pool."""

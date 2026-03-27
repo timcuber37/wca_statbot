@@ -1,5 +1,6 @@
 """Database setup script for WCA Statistics Bot."""
 import os
+import ssl
 import sys
 import asyncio
 import aiomysql
@@ -14,6 +15,10 @@ DB_PORT = int(os.getenv("DB_PORT", "3306"))
 DB_USER = os.getenv("DB_USER", "root")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")
 DB_NAME = os.getenv("DB_NAME", "wca")
+DB_SSL = os.getenv("DB_SSL", "false").lower() == "true"
+
+# Build SSL context if needed (required for TiDB Serverless)
+SSL_CTX = ssl.create_default_context() if DB_SSL else None
 
 SQL_FILE = "wca_export.sql"
 
@@ -29,6 +34,7 @@ async def create_database():
             port=DB_PORT,
             user=DB_USER,
             password=DB_PASSWORD,
+            ssl=SSL_CTX,
         )
 
         async with conn.cursor() as cursor:
@@ -63,6 +69,7 @@ async def import_sql_file():
             user=DB_USER,
             password=DB_PASSWORD,
             db=DB_NAME,
+            ssl=SSL_CTX,
         )
 
         print("[INFO] Importing SQL file (this may take a few minutes)...")
@@ -113,6 +120,7 @@ async def test_database():
             user=DB_USER,
             password=DB_PASSWORD,
             db=DB_NAME,
+            ssl=SSL_CTX,
         )
 
         async with conn.cursor() as cursor:

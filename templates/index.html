@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WCA StatBot</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-inner">
+            <a href="/" class="nav-logo">WCA StatBot</a>
+            <div class="nav-links">
+                <a href="/" class="nav-link active">Home</a>
+                <a href="/about" class="nav-link">About</a>
+                <a href="https://github.com/timcuber37/wca_statbot" target="_blank" rel="noopener" class="nav-link nav-link-external">
+                    GitHub
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                        <polyline points="15 3 21 3 21 9"></polyline>
+                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                    </svg>
+                </a>
+                <button class="auth-btn" id="auth-btn" onclick="handleAuth()">Sign In</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <form id="query-form">
+            <div class="search-bar">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="question" placeholder="Ask a question about WCA competitors, results, and competitions!" autocomplete="off" required>
+                <button type="submit" id="submit-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                </button>
+            </div>
+        </form>
+
+        <div id="loading" class="hidden">
+            <div class="loading-bar"></div>
+            <span>Processing your question...</span>
+        </div>
+
+        <div id="error" class="hidden"></div>
+
+        <div id="results" class="hidden">
+            <div class="results-header">
+                <div id="result-count"></div>
+                <button class="save-btn hidden" id="save-btn" onclick="saveCurrentQuery()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    Save
+                </button>
+            </div>
+            <div id="sql-display">
+                <details>
+                    <summary>Generated SQL</summary>
+                    <code id="sql-code"></code>
+                </details>
+            </div>
+            <div id="table-container"></div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>Data based on the <a href="https://www.worldcubeassociation.org/export/results" target="_blank" rel="noopener">WCA data export</a> from March 14, 2026.</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = '{{ supabase_url }}';
+        const SUPABASE_ANON_KEY = '{{ supabase_anon_key }}';
+        let sbClient = null;
+        let currentUser = null;
+        let lastQuery = null;
+
+        if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+            try {
+                sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                initAuth();
+            } catch (e) {
+                console.warn('Supabase init failed:', e);
+            }
+        }
+
+        async function initAuth() {
+            try {
+                const { data: { session } } = await sbClient.auth.getSession();
+                updateAuthUI(session);
+
+                sbClient.auth.onAuthStateChange((_event, session) => {
+                    updateAuthUI(session);
+                });
+            } catch (e) {
+                console.warn('Auth init failed:', e);
+            }
+        }
+
+        function updateAuthUI(session) {
+            const authBtn = document.getElementById('auth-btn');
+            const saveBtn = document.getElementById('save-btn');
+
+            if (session?.user) {
+                currentUser = session.user;
+                const name = session.user.user_metadata?.full_name || session.user.email;
+                authBtn.textContent = name;
+                authBtn.classList.add('signed-in');
+                if (lastQuery) saveBtn.classList.remove('hidden');
+            } else {
+                currentUser = null;
+                authBtn.textContent = 'Sign In';
+                authBtn.classList.remove('signed-in');
+                saveBtn.classList.add('hidden');
+            }
+        }
+
+        function handleAuth() {
+            if (currentUser) {
+                window.location.href = '/profile';
+            } else {
+                window.location.href = '/login';
+            }
+        }
+
+        async function getAccessToken() {
+            if (!sbClient) return null;
+            const { data: { session } } = await sbClient.auth.getSession();
+            return session?.access_token || null;
+        }
+
+        async function saveCurrentQuery() {
+            if (!lastQuery || !currentUser) return;
+            const saveBtn = document.getElementById('save-btn');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+
+            const token = await getAccessToken();
+            try {
+                const response = await fetch('/api/save-query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(lastQuery)
+                });
+
+                if (response.ok) {
+                    saveBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Saved';
+                    setTimeout(() => {
+                        saveBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg> Save';
+                        saveBtn.disabled = false;
+                    }, 2000);
+                } else {
+                    saveBtn.textContent = 'Error';
+                    saveBtn.disabled = false;
+                }
+            } catch {
+                saveBtn.textContent = 'Error';
+                saveBtn.disabled = false;
+            }
+        }
+
+        // Query form
+        const form = document.getElementById('query-form');
+        const input = document.getElementById('question');
+        const loading = document.getElementById('loading');
+        const errorDiv = document.getElementById('error');
+        const results = document.getElementById('results');
+        const sqlCode = document.getElementById('sql-code');
+        const resultCount = document.getElementById('result-count');
+        const tableContainer = document.getElementById('table-container');
+        const submitBtn = document.getElementById('submit-btn');
+
+        const GUEST_QUERY_LIMIT = 5;
+
+        function getGuestQueryCount() {
+            return parseInt(localStorage.getItem('guestQueryCount') || '0', 10);
+        }
+
+        function incrementGuestQueryCount() {
+            localStorage.setItem('guestQueryCount', getGuestQueryCount() + 1);
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const question = input.value.trim();
+            if (!question) return;
+
+            // Check guest query limit
+            if (!currentUser && getGuestQueryCount() >= GUEST_QUERY_LIMIT) {
+                errorDiv.innerHTML = 'You\'ve reached the free query limit. <a href="/login" style="color:#4f6ef7;text-decoration:underline">Sign in</a> for unlimited queries.';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            loading.classList.remove('hidden');
+            errorDiv.classList.add('hidden');
+            results.classList.add('hidden');
+            submitBtn.disabled = true;
+
+            try {
+                const response = await fetch('/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    errorDiv.textContent = data.error || 'Something went wrong.';
+                    errorDiv.classList.remove('hidden');
+                    return;
+                }
+
+                // Count this query for guests
+                if (!currentUser) incrementGuestQueryCount();
+
+                sqlCode.textContent = data.sql;
+                resultCount.textContent = `${data.count} result${data.count !== 1 ? 's' : ''} found`;
+                tableContainer.innerHTML = data.html;
+                results.classList.remove('hidden');
+
+                lastQuery = { question, sql: data.sql, results: [] };
+
+                const saveBtn = document.getElementById('save-btn');
+                if (currentUser) saveBtn.classList.remove('hidden');
+
+            } catch (err) {
+                errorDiv.textContent = 'Failed to connect to server.';
+                errorDiv.classList.remove('hidden');
+            } finally {
+                loading.classList.add('hidden');
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
