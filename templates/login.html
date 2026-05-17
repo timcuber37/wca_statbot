@@ -41,15 +41,13 @@
                     Sign in with Google
                 </button>
 
-                <button class="provider-btn wca" disabled>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="2" y="2" width="20" height="20" rx="4"/>
-                        <path d="M8 12l3 3 5-5"/>
-                    </svg>
+                <button class="provider-btn wca" onclick="signInWithWCA()">
+                    <img src="{{ url_for('static', filename='wca_logo.png') }}" width="20" height="20" alt="WCA logo">
                     Sign in with WCA
-                    <span class="coming-soon">Coming Soon</span>
                 </button>
             </div>
+
+            <div id="login-error" class="login-error" style="display:none"></div>
 
             <a href="/" class="login-back">Back to home</a>
         </div>
@@ -81,6 +79,29 @@
                 provider: 'google',
                 options: { redirectTo: window.location.origin + '/login' }
             });
+        }
+
+        function signInWithWCA() {
+            window.location.href = '/auth/wca';
+        }
+
+        // Show any error returned by the WCA OAuth callback.
+        const errorParam = new URLSearchParams(window.location.search).get('error');
+        if (errorParam) {
+            const messages = {
+                wca_not_configured: 'WCA sign-in is not configured yet.',
+                invalid_state: 'Authentication request expired. Please try again.',
+                no_code: 'WCA did not return an authorization code.',
+                token_exchange_failed: 'Failed to exchange authorization code.',
+                no_access_token: 'WCA did not return an access token.',
+                user_info_failed: 'Failed to fetch your WCA profile.',
+                no_email: 'Your WCA account has no public email address.',
+                user_creation_failed: 'Failed to create your account. Please try again.',
+                login_link_failed: 'Failed to create your session. Please try again.',
+            };
+            const el = document.getElementById('login-error');
+            el.textContent = messages[errorParam] || 'Sign-in failed. Please try again.';
+            el.style.display = 'block';
         }
     </script>
 </body>

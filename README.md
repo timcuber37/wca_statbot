@@ -1,337 +1,190 @@
-# WCA Statistics Bot
+# WCA StatBot
 
-A Discord bot that translates natural language questions into SQL queries to fetch World Cube Association (WCA) statistics from a local MySQL database.
+An AI-powered tool that lets you query World Cube Association competition data using plain English. Available as both a web app and a Discord bot.
+
+**Live site:** [wca-statbot.fly.dev](https://wca-statbot.fly.dev)
 
 ## Features
 
-- 🤖 Natural language to SQL translation using Anthropic's Claude AI (Haiku model)
-- 📊 Query WCA statistics using plain English
-- 🗄️ Local MySQL database with 6.2M+ competition results
-- 🔍 Support for world records, rankings, competition results, and more
-- 💬 Easy-to-use Discord commands
-- ⚡ Fast queries with connection pooling
-- 📐 Dynamic column formatting for readable results
+- Natural language to SQL translation using Anthropic's Claude AI
+- Query WCA statistics using plain English — no SQL required
+- Web interface with instant results displayed in formatted tables
+- Discord bot with the same query capabilities
+- Google sign-in via Supabase Auth
+- Save and revisit past queries from your profile
+- Guest access with 5 free queries before sign-in required
 
-## Database Statistics
+## Database
 
-The bot connects to a local MySQL database containing:
-- **279,869** competitors (persons)
-- **6,266,346** competition results
-- **16,817** competitions
-- **21** puzzle events
-- **979,165** single solve rankings
-- **848,675** average rankings
-- **28,935,325** individual solve attempts
+The app queries a database populated from the official [WCA data export](https://www.worldcubeassociation.org/export/results) (March 14, 2026), containing:
 
-## Prerequisites
+| Stat | Count |
+|------|-------|
+| Competitors | 281,645 |
+| Results | 6,346,883 |
+| Competitions | 17,150 |
+| Events | 21 |
 
-- Python 3.8 or higher
-- MySQL Server (or XAMPP/WAMP/MAMP)
-- Discord Bot Token ([Create a bot](https://discord.com/developers/applications))
-- Anthropic API Key ([Get one here](https://console.anthropic.com/))
-- WCA Database Export ([Download here](https://www.worldcubeassociation.org/export/results))
+## Tech Stack
 
-## Installation
+- **Backend:** Python, Flask
+- **AI:** Anthropic Claude (natural language to SQL)
+- **WCA Database:** TiDB Serverless (MySQL-compatible)
+- **Auth & Saved Queries:** Supabase (PostgreSQL + Auth)
+- **Discord:** discord.py
+- **Deployment:** Fly.io, Docker, Gunicorn
 
-### 1. Clone the repository
+## How It Works
+
+1. User asks a question in plain English (web or Discord)
+2. Claude AI translates the question into a SQL query against the WCA database schema
+3. The query executes against TiDB Serverless and results are returned in a formatted table
+
+## Web App
+
+The web interface provides:
+- A search bar to ask any question about WCA data
+- Formatted result tables with the generated SQL visible
+- Google sign-in for unlimited queries and saved query history
+- A profile page with account info and saved queries
+
+## Discord Bot
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `!wca query <question>` | Ask a question about WCA data |
+| `!wca q <question>` | Short alias for query |
+| `!wca ask <question>` | Another alias for query |
+| `!wca help` | Show available commands |
+| `!wca ping` | Check bot latency |
+
+### Add to Your Server
+
+1. Use the [invite link](https://discord.com/oauth2/authorize?client_id=1450571905043267594&permissions=2048&scope=bot) to add the bot
+2. Select your server (requires **Manage Server** permissions)
+3. Authorize the requested permissions
+4. Type `!wca query` followed by your question in any text channel
+
+## Example Questions
+
+- What is the world record for 3x3?
+- Who are the top 10 fastest 2x2 solvers?
+- How many competitions have been held in the United States in 2025?
+- Who has the most world record single results?
+- Who placed first in 3x3 finals at the 2023 World Championship?
+
+## Project Structure
+
+```
+wca_statbot/
+├── app.py                  # Flask web application
+├── bot.py                  # Discord bot
+├── config.py               # Configuration management
+├── services/
+│   ├── nl_to_sql.py        # Natural language to SQL translation (Claude AI)
+│   ├── wca_api.py          # WCA database query execution and formatting
+│   ├── auth.py             # Supabase authentication helpers
+│   └── saved_queries.py    # Saved query CRUD operations
+├── templates/
+│   ├── index.html          # Main query page
+│   ├── about.html          # About page
+│   ├── login.html          # Login page (Google / WCA auth)
+│   └── profile.html        # Profile page with saved queries
+├── static/
+│   └── style.css           # Styles
+├── Dockerfile              # Docker container for deployment
+├── fly.toml                # Fly.io configuration
+├── requirements.txt        # Python dependencies
+└── .env                    # Environment variables (not in git)
+```
+
+## Local Development
+
+### Prerequisites
+
+- Python 3.10+
+- [Anthropic API key](https://console.anthropic.com/)
+- TiDB Serverless database (or local MySQL) with WCA data imported
+- Supabase project (for auth and saved queries)
+- Discord bot token (if running the bot)
+
+### Setup
+
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/timcuber37/wca_statbot.git
 cd wca_statbot
-```
-
-### 2. Create a virtual environment (optional but recommended)
-```bash
 python -m venv venv
-# On Windows:
-venv\Scripts\activate
-# On macOS/Linux:
-source venv/bin/activate
-```
-
-### 3. Install dependencies
-```bash
+source venv/bin/activate  # or venv\Scripts\activate on Windows
 pip install -r requirements.txt
 ```
 
-### 4. Set up environment variables
-Create a `.env` file in the project root with the following:
+Create a `.env` file:
 
 ```env
-# Discord Configuration
-DISCORD_TOKEN=your_discord_bot_token_here
-DISCORD_GUILD_ID=your_guild_id_here
-
-# Anthropic (Claude) Configuration
-ANTHROPIC_API_KEY=your_anthropic_api_key_here
+# Anthropic
+ANTHROPIC_API_KEY=your_key_here
 ANTHROPIC_MODEL=claude-3-haiku-20240307
 
-# WCA API Configuration
-WCA_API_BASE_URL=https://www.worldcubeassociation.org/api/v0
-
-# Database Configuration
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=your_mysql_password_here
+# WCA Database (TiDB Serverless)
+DB_HOST=gateway01.us-east-1.prod.aws.tidbcloud.com
+DB_PORT=4000
+DB_USER=your_tidb_user
+DB_PASSWORD=your_tidb_password
 DB_NAME=wca
-DATABASE_URL=mysql+aiomysql://root:your_mysql_password_here@localhost:3306/wca
+DB_SSL=true
 
-# Bot Settings
-COMMAND_PREFIX=!wca
+# Supabase
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your_anon_key
+
+# Discord (optional, for bot only)
+DISCORD_TOKEN=your_discord_token
+DISCORD_GUILD_ID=your_guild_id
+
+# App Settings
 MAX_QUERY_RESULTS=50
+COMMAND_PREFIX=!wca
 ```
 
-### 5. Set up the MySQL database
+### Run the web app
 
-#### Install MySQL
-- **Windows**: Download from [MySQL Downloads](https://dev.mysql.com/downloads/mysql/) or use XAMPP/WAMP
-- **macOS**: `brew install mysql`
-- **Linux**: `sudo apt-get install mysql-server`
-
-#### Download WCA Data
-1. Download the latest WCA database export from [WCA Results Export](https://www.worldcubeassociation.org/export/results)
-2. Extract the `wca_export.sql` file
-3. Place it in the `wca_statbot` directory
-
-#### Import the database
 ```bash
-python setup_database.py
+python app.py
 ```
 
-This script will:
-- Create the `wca` database
-- Import all WCA data (may take several minutes)
-- Verify the setup and show table counts
+### Run the Discord bot
 
-For detailed database setup instructions, see [DATABASE_SETUP.md](DATABASE_SETUP.md)
-
-### 6. Enable Discord Bot Permissions
-
-In the Discord Developer Portal:
-1. Go to your bot application
-2. Navigate to "Bot" settings
-3. Enable **MESSAGE CONTENT INTENT** under "Privileged Gateway Intents"
-4. Invite the bot to your server with proper permissions (Send Messages, Read Messages, etc.)
-
-### 7. Run the bot
 ```bash
 python bot.py
 ```
 
-You should see:
-```
-WCA Statbot#8882 has connected to Discord!
-Bot is in 1 guild(s)
-```
+## Deployment
 
-## Usage
+The app is deployed on [Fly.io](https://fly.io) using Docker.
 
-### Commands
-
-Once the bot is running, use these commands in Discord:
-
-#### Query Command
-```
-!wca query <your question>
-```
-or the shorter version:
-```
-!wcaquery <your question>
-```
-
-**Examples:**
-- `!wca query What is the world record for 3x3?`
-- `!wca query Who are the top 10 fastest 3x3 average times?`
-- `!wca query Who is the world record holder for 4x4?`
-- `!wca query Show me the top 10 American rankings for 3x3 average`
-- `!wca query Who are the top 10 rankings for clock?`
-- `!wca query Who has the most competition results?`
-
-#### Other Commands
-- `!wca help` - Show help information
-- `!wca ping` - Check if the bot is responsive
-
-### Supported Event IDs
-
-The bot recognizes these WCA event identifiers:
-- `333` - 3x3x3 Cube
-- `222` - 2x2x2 Cube
-- `444` - 4x4x4 Cube
-- `555` - 5x5x5 Cube
-- `666` - 6x6x6 Cube
-- `777` - 7x7x7 Cube
-- `333bf` - 3x3x3 Blindfolded
-- `333fm` - 3x3x3 Fewest Moves
-- `333oh` - 3x3x3 One-Handed
-- `clock` - Clock
-- `minx` - Megaminx
-- `pyram` - Pyraminx
-- `skewb` - Skewb
-- `sq1` - Square-1
-- `444bf` - 4x4x4 Blindfolded
-- `555bf` - 5x5x5 Blindfolded
-- `333mbf` - 3x3x3 Multi-Blind
-
-## Architecture
-
-### Project Structure
-```
-wca_statbot/
-├── bot.py                  # Main Discord bot with command handlers
-├── config.py              # Configuration management
-├── setup_database.py      # Database setup and import script
-├── services/
-│   ├── nl_to_sql.py      # Natural language to SQL translator (Claude AI)
-│   └── wca_api.py        # Database query executor and result formatter
-├── requirements.txt       # Python dependencies
-├── .env                  # Environment variables (not in git)
-├── DATABASE_SETUP.md     # Detailed database setup guide
-└── README.md             # This file
-```
-
-### How It Works
-
-1. **User sends a question** in Discord (e.g., "Who is the world record holder for 3x3?")
-2. **Discord bot receives** the message via `bot.py`
-3. **NL-to-SQL service** (`nl_to_sql.py`) sends the question to Claude AI with WCA database schema
-4. **Claude generates SQL** query based on the question and schema
-5. **WCA API service** (`wca_api.py`) executes the SQL against the MySQL database
-6. **Results are formatted** with dynamic column alignment
-7. **Bot sends response** back to Discord with the formatted results
-
-### Database Schema
-
-The bot uses the official WCA database schema with these main tables:
-
-- **ranks_single**: World rankings for single solves
-- **ranks_average**: World rankings for averages
-- **results**: All competition results
-- **persons**: Competitor information
-- **competitions**: Competition details
-- **events**: Puzzle event information
-- **countries**: Country information
-
-Times are stored in centiseconds (1/100th of a second). For example:
-- 1000 = 10.00 seconds
-- 6000 = 1:00.00 (1 minute)
-
-## Configuration
-
-Key settings in `.env`:
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DISCORD_TOKEN` | Your Discord bot token | Required |
-| `ANTHROPIC_API_KEY` | Your Anthropic API key | Required |
-| `ANTHROPIC_MODEL` | Claude model to use | claude-3-haiku-20240307 |
-| `DB_HOST` | MySQL host | localhost |
-| `DB_PORT` | MySQL port | 3306 |
-| `DB_USER` | MySQL username | root |
-| `DB_PASSWORD` | MySQL password | Required |
-| `DB_NAME` | Database name | wca |
-| `COMMAND_PREFIX` | Bot command prefix | !wca |
-| `MAX_QUERY_RESULTS` | Max results to display | 50 |
-
-## Troubleshooting
-
-### Bot not responding to commands
-- Verify MESSAGE CONTENT INTENT is enabled in Discord Developer Portal
-- Check that the command prefix is correct (`!wca` or `!wcaquery`)
-- Review bot logs for errors
-
-### Database connection errors
-- Ensure MySQL is running
-- Verify database credentials in `.env` file
-- Check that the `wca` database exists
-
-### SQL query errors
-- The bot generates SQL based on natural language - try rephrasing your question
-- Check logs to see the generated SQL query
-- Some complex queries may not be supported
-
-### API rate limits
-- Claude API has rate limits - space out requests if needed
-- Consider upgrading to a higher Anthropic API tier for more requests
-
-## Updating WCA Data
-
-The WCA releases new database exports regularly (usually monthly). To update:
-
-1. Download the latest export from [WCA Results Export](https://www.worldcubeassociation.org/export/results)
-2. Replace `wca_export.sql` with the new file
-3. Run the setup script again:
-   ```bash
-   python setup_database.py
-   ```
-
-## Performance
-
-- **Database**: Uses connection pooling (1-10 connections) for efficient queries
-- **Response Time**: Most queries complete in 1-3 seconds
-- **Caching**: Results are not cached - all queries are real-time
-- **Formatting**: Dynamic column width calculation for readable output
-
-## Future Improvements
-
-- [ ] Add query result caching for frequently asked questions
-- [ ] Support for more complex multi-table joins
-- [ ] Add visualization/charts for rankings and trends
-- [ ] Support for historical data queries (e.g., "WR progression")
-- [ ] Add pagination for very large result sets
-- [ ] Implement rate limiting per user
-- [ ] Add query history and favorites
-- [ ] Support for competition-specific queries
-
-## Development
-
-### Running Tests
 ```bash
-# Test configuration
-python test_setup.py
+# Deploy
+fly deploy
 
-# Test integration
-python test_integration.py
-
-# Check database schema
-python check_schema.py
-
-# Check table row counts
-python check_tables.py
+# Set secrets
+fly secrets set ANTHROPIC_API_KEY=... DB_HOST=... DB_PORT=... DB_USER=... DB_PASSWORD=... DB_NAME=... DB_SSL=true SUPABASE_URL=... SUPABASE_ANON_KEY=...
 ```
 
-### Adding New Features
-1. Update the schema context in `services/nl_to_sql.py` if adding new tables
-2. Modify `services/wca_api.py` for custom result formatting
-3. Add new commands in `bot.py` following the existing pattern
+## Security
 
-## Contributing
-
-Contributions are welcome! Please:
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## Credits
-
-- **WCA**: World Cube Association for providing the database export
-- **Discord.py**: Discord API wrapper
-- **Anthropic**: Claude AI for natural language processing
-- **aiomysql**: Async MySQL connector
+- SQL validation rejects non-SELECT queries and blocks dangerous keywords
+- Rate limiting on all API endpoints (flask-limiter)
+- HTML escaping on all query result output
+- Security headers (X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy)
+- Input validation and length limits
+- Row Level Security on Supabase saved queries table
 
 ## License
 
-MIT License - see LICENSE file for details
-
-## Support
-
-For issues or questions:
-1. Check the troubleshooting section above
-2. Review logs in the console output
-3. Open an issue on GitHub
-4. Contact the maintainers
+MIT License — see [LICENSE](LICENSE) for details.
 
 ---
 
-Built with ❤️ for the speedcubing community
+Built for the speedcubing community.

@@ -4,7 +4,10 @@ import os
 import sys
 import json
 import logging
-from flask import Flask, render_template, request, jsonify
+import secrets
+import urllib.parse
+import requests as http_requests
+from flask import Flask, render_template, request, jsonify, redirect, session
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from dotenv import load_dotenv
@@ -15,16 +18,22 @@ load_dotenv()
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-from config import MAX_QUERY_RESULTS, SUPABASE_URL, SUPABASE_ANON_KEY
+from config import (MAX_QUERY_RESULTS, SUPABASE_URL, SUPABASE_ANON_KEY,
+                    WCA_CLIENT_ID, WCA_CLIENT_SECRET, WCA_REDIRECT_URI, SECRET_KEY)
 from services.nl_to_sql import NLToSQLService
 from services.wca_api import WCAService
-from services.auth import get_user_from_token
+from services.auth import get_user_from_token, find_or_create_wca_user, generate_wca_login_link
 from services import saved_queries
+
+_WCA_AUTH_URL = "https://www.worldcubeassociation.org/oauth/authorize"
+_WCA_TOKEN_URL = "https://www.worldcubeassociation.org/oauth/token"
+_WCA_ME_URL = "https://www.worldcubeassociation.org/api/v0/me"
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+app.secret_key = SECRET_KEY or secrets.token_hex(32)
 
 MAX_QUESTION_LENGTH = 2000
 
@@ -185,6 +194,97 @@ def delete_query(query_id):
     if success:
         return jsonify({'success': True})
     return jsonify({'error': 'Failed to delete query'}), 500
+
+
+# --- WCA OAuth ---
+
+@app.route('/auth/wca')
+@limiter.exempt
+def wca_login():
+    """Redirect the browser to WCA's OAuth authorization page."""
+    if not WCA_CLIENT_ID:
+        return redirect('/login?error=wca_not_configured')
+
+    state = secrets.token_urlsafe(32)
+    session['wca_oauth_state'] = state
+
+    params = {
+        'client_id': WCA_CLIENT_ID,
+        'redirect_uri': WCA_REDIRECT_URI,
+        'response_type': 'code',
+        'scope': 'public email',
+        'state': state,
+    }
+    return redirect(_WCA_AUTH_URL + '?' + urllib.parse.urlencode(params))
+
+
+@app.route('/auth/wca/callback')
+@limiter.exempt
+def wca_callback():
+    """Handle the OAuth callback from WCA, create a Supabase session, and redirect home."""
+    error = request.args.get('error')
+    if error:
+        logger.warning(f"WCA OAuth error: {error}")
+        return redirect('/login?error=' + urllib.parse.quote(error))
+
+    state = request.args.get('state', '')
+    if not state or state != session.pop('wca_oauth_state', None):
+        return redirect('/login?error=invalid_state')
+
+    code = request.args.get('code')
+    if not code:
+        return redirect('/login?error=no_code')
+
+    # Exchange authorization code for WCA access token.
+    try:
+        token_resp = http_requests.post(_WCA_TOKEN_URL, data={
+            'code': code,
+            'client_id': WCA_CLIENT_ID,
+            'client_secret': WCA_CLIENT_SECRET,
+            'redirect_uri': WCA_REDIRECT_URI,
+            'grant_type': 'authorization_code',
+        }, timeout=10)
+        token_resp.raise_for_status()
+        wca_access_token = token_resp.json().get('access_token')
+    except Exception as e:
+        logger.error(f"WCA token exchange failed: {e}")
+        return redirect('/login?error=token_exchange_failed')
+
+    if not wca_access_token:
+        return redirect('/login?error=no_access_token')
+
+    # Fetch WCA user profile.
+    try:
+        me_resp = http_requests.get(_WCA_ME_URL, headers={
+            'Authorization': f'Bearer {wca_access_token}'
+        }, timeout=10)
+        me_resp.raise_for_status()
+        wca_user = me_resp.json().get('me', {})
+    except Exception as e:
+        logger.error(f"WCA user info fetch failed: {e}")
+        return redirect('/login?error=user_info_failed')
+
+    email = wca_user.get('email')
+    if not email:
+        return redirect('/login?error=no_email')
+
+    wca_id = wca_user.get('wca_id', '')
+    name = wca_user.get('name', '')
+    avatar_url = (wca_user.get('avatar') or {}).get('url', '')
+
+    # Find or create a matching Supabase account for this WCA user.
+    user = find_or_create_wca_user(email, name, wca_id, avatar_url)
+    if not user:
+        return redirect('/login?error=user_creation_failed')
+
+    # Generate a Supabase magic link so the browser gets a real session.
+    # The magic link redirects to /login where onAuthStateChange picks it up.
+    redirect_to = request.url_root.rstrip('/') + '/login'
+    login_link = generate_wca_login_link(email, redirect_to)
+    if not login_link:
+        return redirect('/login?error=login_link_failed')
+
+    return redirect(login_link)
 
 
 if __name__ == '__main__':

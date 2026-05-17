@@ -28,7 +28,8 @@ ENV/
 
 # Environment variables
 .env
-.env.local
+.env.*
+!.env.example
 
 # IDE
 .vscode/
@@ -53,5 +54,23 @@ logs/
 # WCA Database Export (too large for git)
 wca_export.sql
 WCA_export.sql
-*.sql
+wca_schema.sql
+wca_data.sql
 
+# CSV exports
+csv_export/
+
+# Export/setup scripts (not needed in production)
+export_csv.py
+check_schema.py
+check_tables.py
+setup_database.py
+test_setup.py
+test_integration.py
+
+# Documentation (not needed in repo)
+PRD.md
+DATABASE_SETUP.md
+
+# Docker
+*.dockerignore

@@ -29,6 +29,15 @@ DB_SSL = os.getenv("DB_SSL", "false").lower() == "true"  # Required for TiDB Ser
 # Supabase Configuration
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+
+# WCA OAuth Configuration
+WCA_CLIENT_ID = os.getenv("WCA_CLIENT_ID", "")
+WCA_CLIENT_SECRET = os.getenv("WCA_CLIENT_SECRET", "")
+WCA_REDIRECT_URI = os.getenv("WCA_REDIRECT_URI", "http://localhost:5000/auth/wca/callback")
+
+# Flask session secret (required for OAuth CSRF state)
+SECRET_KEY = os.getenv("SECRET_KEY", "")
 
 # Bot Settings
 COMMAND_PREFIX = os.getenv("COMMAND_PREFIX", "!wca")

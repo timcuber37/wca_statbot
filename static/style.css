@@ -668,6 +668,17 @@ tr:hover td {
     margin-left: auto;
 }
 
+.login-error {
+    margin-top: 16px;
+    padding: 10px 14px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    color: #dc2626;
+    text-align: center;
+}
+
 .login-back {
     display: inline-block;
     margin-top: 24px;
