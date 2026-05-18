@@ -43,3 +43,14 @@ SECRET_KEY = os.getenv("SECRET_KEY", "")
 COMMAND_PREFIX = os.getenv("COMMAND_PREFIX", "!wca")
 MAX_QUERY_RESULTS = int(os.getenv("MAX_QUERY_RESULTS", "50"))
 
+# Ask a Delegate (RAG) Configuration
+VOYAGE_API_KEY = os.getenv("VOYAGE_API_KEY", "")
+VOYAGE_EMBED_MODEL = os.getenv("VOYAGE_EMBED_MODEL", "voyage-3-large")
+VOYAGE_RERANK_MODEL = os.getenv("VOYAGE_RERANK_MODEL", "rerank-2-lite")
+# Pin to a specific commit SHA in production for reproducibility.
+REGULATIONS_REF = os.getenv("REGULATIONS_REF", "official")
+MAX_GUEST_DELEGATE_QUESTIONS = int(os.getenv("MAX_GUEST_DELEGATE_QUESTIONS", "3"))
+DELEGATE_RETRIEVAL_K = int(os.getenv("DELEGATE_RETRIEVAL_K", "6"))
+DELEGATE_RERANK_INITIAL_K = int(os.getenv("DELEGATE_RERANK_INITIAL_K", "20"))
+DELEGATE_MAX_HISTORY_TURNS = int(os.getenv("DELEGATE_MAX_HISTORY_TURNS", "8"))
+

@@ -23,6 +23,7 @@ from config import (MAX_QUERY_RESULTS, SUPABASE_URL, SUPABASE_ANON_KEY,
 from services.nl_to_sql import NLToSQLService
 from services.wca_api import WCAService
 from services.auth import get_user_from_token, find_or_create_wca_user, generate_wca_login_link
+from services.rag import DelegateRAGService
 from services import saved_queries
 
 _WCA_AUTH_URL = "https://www.worldcubeassociation.org/oauth/authorize"
@@ -46,6 +47,9 @@ limiter = Limiter(
 
 nl_to_sql_service = NLToSQLService()
 wca_service = WCAService()
+delegate_service = DelegateRAGService()
+
+MAX_DELEGATE_HISTORY_MESSAGES = 32
 
 # Persistent event loop for async services (avoids "Event loop is closed" errors)
 _loop = asyncio.new_event_loop()
@@ -108,6 +112,16 @@ def profile():
                            supabase_anon_key=SUPABASE_ANON_KEY)
 
 
+@app.route('/delegate')
+@limiter.exempt
+def delegate():
+    from config import MAX_GUEST_DELEGATE_QUESTIONS
+    return render_template('delegate.html',
+                           supabase_url=SUPABASE_URL,
+                           supabase_anon_key=SUPABASE_ANON_KEY,
+                           max_guest_questions=MAX_GUEST_DELEGATE_QUESTIONS)
+
+
 # --- API ---
 
 @app.route('/query', methods=['POST'])
@@ -149,6 +163,47 @@ def query():
     except Exception as e:
         logger.error(f"Query error: {e}", exc_info=True)
         return jsonify({'error': 'Unable to process your query. Please try again.'}), 500
+
+
+@app.route('/api/delegate/ask', methods=['POST'])
+@limiter.limit("5 per minute")
+def delegate_ask():
+    if not delegate_service.is_ready():
+        return jsonify({'error': 'Ask a Delegate is not configured on this server.'}), 503
+
+    data = request.get_json()
+    if not data or not isinstance(data, dict):
+        return jsonify({'error': 'Invalid request.'}), 400
+
+    question = (data.get('question') or '').strip()
+    if not question:
+        return jsonify({'error': 'Please enter a question.'}), 400
+    if len(question) > MAX_QUESTION_LENGTH:
+        return jsonify({'error': f'Question too long (max {MAX_QUESTION_LENGTH} characters).'}), 400
+
+    history = data.get('history') or []
+    if not isinstance(history, list):
+        return jsonify({'error': 'Invalid history format.'}), 400
+
+    # Defensive: cap history and sanitize each message.
+    sanitized = []
+    for msg in history[-MAX_DELEGATE_HISTORY_MESSAGES:]:
+        if not isinstance(msg, dict):
+            continue
+        role = msg.get('role')
+        content = msg.get('content')
+        if role in ('user', 'assistant') and isinstance(content, str) and content.strip():
+            sanitized.append({'role': role, 'content': content.strip()[:MAX_QUESTION_LENGTH]})
+
+    try:
+        result = delegate_service.answer(sanitized, question)
+        return jsonify({
+            'answer': result['answer'],
+            'sources': result['sources'],
+        })
+    except Exception as e:
+        logger.error(f"Delegate ask error: {e}", exc_info=True)
+        return jsonify({'error': 'Unable to answer right now. Please try again.'}), 500
 
 
 @app.route('/api/save-query', methods=['POST'])

@@ -13,4 +13,5 @@ gunicorn>=22.0.0
 flask-limiter>=3.0.0
 supabase>=2.0.0
 requests>=2.31.0
+voyageai>=0.3.0
 
