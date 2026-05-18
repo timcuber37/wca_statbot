@@ -1,4 +1,4 @@
-"""Configuration management for WCA statbot."""
+"""Configuration management for SpeedCubeMuse."""
 import os
 from dotenv import load_dotenv
 

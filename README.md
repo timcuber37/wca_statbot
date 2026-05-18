@@ -1,8 +1,8 @@
-# WCA StatBot
+# SpeedCubeMuse
 
 An AI-powered tool that lets you query World Cube Association competition data using plain English. Available as both a web app and a Discord bot.
 
-**Live site:** [wca-statbot.fly.dev](https://wca-statbot.fly.dev)
+**Live site:** [speedcubemuse.fly.dev](https://speedcubemuse.fly.dev)
 
 ## Features
 
@@ -28,7 +28,8 @@ The app queries a database populated from the official [WCA data export](https:/
 ## Tech Stack
 
 - **Backend:** Python, Flask
-- **AI:** Anthropic Claude (natural language to SQL)
+- **AI:** Anthropic Claude (natural language to SQL, Ask a Delegate generation)
+- **Embeddings & Reranking:** Voyage AI (Ask a Delegate RAG pipeline)
 - **WCA Database:** TiDB Serverless (MySQL-compatible)
 - **Auth & Saved Queries:** Supabase (PostgreSQL + Auth)
 - **Discord:** discord.py

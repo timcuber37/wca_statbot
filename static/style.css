@@ -740,6 +740,45 @@ tr:hover td {
     color: #9ca3af;
 }
 
+.profile-name-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.provider-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    padding: 2px 8px;
+    border-radius: 999px;
+    text-transform: uppercase;
+}
+
+.provider-badge.wca {
+    background: #003da5;
+    color: #fff;
+}
+
+.profile-wca-id {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-bottom: 6px;
+}
+
+.profile-wca-id a {
+    color: #003da5;
+    text-decoration: none;
+}
+
+.profile-wca-id a:hover {
+    text-decoration: underline;
+}
+
 .signout-btn {
     padding: 8px 20px;
     font-size: 0.85rem;

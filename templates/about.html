@@ -3,23 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About - WCA StatBot</title>
+    <title>About - SpeedCubeMuse</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <nav class="navbar">
         <div class="nav-inner">
-            <a href="/" class="nav-logo">WCA StatBot</a>
+            <a href="/" class="nav-logo">SpeedCubeMuse</a>
             <div class="nav-links">
                 <a href="/" class="nav-link">Home</a>
                 <a href="/delegate" class="nav-link">Ask a Delegate</a>
                 <a href="/about" class="nav-link active">About</a>
-                <a href="https://github.com/timcuber37/wca_statbot" target="_blank" rel="noopener" class="nav-link nav-link-external">
-                    GitHub
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                        <polyline points="15 3 21 3 21 9"></polyline>
-                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                <a href="https://github.com/timcuber37/wca_statbot" target="_blank" rel="noopener" class="nav-link nav-link-external" aria-label="GitHub">
+                    <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
                     </svg>
                 </a>
                 <button class="auth-btn" id="auth-btn" onclick="handleAuth()">Sign In</button>
@@ -29,12 +26,12 @@
 
     <div class="container">
         <h1>About</h1>
-        <p class="subtitle">How WCA StatBot works</p>
+        <p class="subtitle">How SpeedCubeMuse works</p>
 
         <div class="about-content">
             <section class="about-section">
-                <h2>What is WCA StatBot?</h2>
-                <p>WCA StatBot is an AI-powered tool that lets you query World Cube Association competition data using plain English. Instead of writing SQL, just ask a question and get instant results.</p>
+                <h2>What is SpeedCubeMuse?</h2>
+                <p>SpeedCubeMuse is an AI-powered tool that lets you query World Cube Association competition data using plain English. Instead of writing SQL, just ask a question and get instant results.</p>
             </section>
 
             <section class="about-section">
@@ -122,8 +119,50 @@
             </section>
 
             <section class="about-section">
+                <h2>Ask a Delegate</h2>
+                <p>Ask a Delegate is an AI-powered chatbot trained on the full <a href="https://www.worldcubeassociation.org/regulations/" target="_blank" rel="noopener">WCA Regulations and Guidelines</a>. You can ask it anything you'd normally ask a WCA Delegate at a competition — rules clarifications, procedural questions, penalty interpretations, and more.</p>
+
+                <h3 class="about-subsection-title">How It Works</h3>
+                <div class="steps">
+                    <div class="step">
+                        <span class="step-num">1</span>
+                        <div>
+                            <h3>Ask Your Question</h3>
+                            <p>Type any question about WCA rules, procedures, or competition logistics in plain English.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <span class="step-num">2</span>
+                        <div>
+                            <h3>Semantic Search</h3>
+                            <p>Your question is matched against all 697 WCA regulations and guidelines using vector similarity search (Voyage AI embeddings + pgvector), then re-ranked to surface the most relevant passages.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <span class="step-num">3</span>
+                        <div>
+                            <h3>Grounded Answer</h3>
+                            <p>Claude generates a response grounded strictly in the retrieved regulations, with citations linked directly to the official WCA Regulations page.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 class="about-subsection-title">Example Questions</h3>
+                <ul class="example-list">
+                    <li>What happens if a competitor touches the puzzle after stopping the timer?</li>
+                    <li>Can a competitor use a different cube than the one assigned to them?</li>
+                    <li>What is the correct procedure for a +2 penalty?</li>
+                    <li>How many attempts does a competitor get for 3x3 blindfolded?</li>
+                    <li>What counts as a DNF in fewest moves?</li>
+                </ul>
+
+                <h3 class="about-subsection-title">Guest Access</h3>
+                <p>Guests can ask up to 5 questions without signing in. Sign in with Google or your WCA account for unlimited access and conversation history.</p>
+            </section>
+
+            <section class="about-section">
                 <h2>Discord Bot</h2>
-                <p>WCA StatBot is also available as a Discord bot, bringing the same natural language query capabilities directly into your server!</p>
+                <p>SpeedCubeMuse is also available as a Discord bot, bringing the same natural language query capabilities directly into your server!</p>
 
                 <h3 class="about-subsection-title">Commands</h3>
                 <div class="command-list">
@@ -147,7 +186,7 @@
                         <span class="step-num">1</span>
                         <div>
                             <h3>Click the Invite Link</h3>
-                            <p>Use <a href="https://discord.com/oauth2/authorize?client_id=1450571905043267594&permissions=2048&scope=bot" target="_blank" rel="noopener">this link</a> to add WCA StatBot to your Discord server.</p>
+                            <p>Use <a href="https://discord.com/oauth2/authorize?client_id=1450571905043267594&permissions=2048&scope=bot" target="_blank" rel="noopener">this link</a> to add SpeedCubeMuse to your Discord server.</p>
                         </div>
                     </div>
                     <div class="step">
@@ -181,6 +220,7 @@
                     <span class="tag">Flask</span>
                     <span class="tag">Discord.py</span>
                     <span class="tag">Anthropic Claude</span>
+                    <span class="tag">Voyage AI</span>
                     <span class="tag">TiDB Serverless</span>
                     <span class="tag">Supabase</span>
                     <span class="tag">Fly.io</span>

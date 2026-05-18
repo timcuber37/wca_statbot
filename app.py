@@ -1,4 +1,4 @@
-"""Flask web application for WCA StatBot."""
+"""Flask web application for SpeedCubeMuse."""
 import asyncio
 import os
 import sys
